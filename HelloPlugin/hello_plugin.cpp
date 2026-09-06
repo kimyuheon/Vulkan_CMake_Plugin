@@ -104,6 +104,25 @@ namespace {
         std::printf("[HelloPlugin] 두께 두 배: %d개\n", changed);
     }
 
+    // 특성창에서 값이 바뀌었을 때 — 정의는 엔진이 이미 갱신했고, 형상만 다시 만들면 된다.
+    // 이게 "커스텀 엔티티" 의 핵심이다: 두께 슬라이더를 끌면 벽이 실제로 두꺼워진다.
+    void onEntityChanged(unsigned int id, const char* owner, const char* type, const char* data) {
+        if (std::strcmp(owner, kOwner) != 0 || std::strcmp(type, "wall") != 0) return;
+        Wall w;
+        if (!decode(data, w)) return;
+        std::vector<float> xyz; std::vector<unsigned int> idx;
+        buildWallMesh(w, xyz, idx);
+        CAD_ReplaceMesh(id, xyz.data(), static_cast<unsigned int>(xyz.size() / 3),
+                        idx.data(), static_cast<unsigned int>(idx.size()), nullptr);
+    }
+
+    // 엔진 이벤트 — 여러 플러그인이 동시에 구독할 수 있는 목록형이다.
+    // (CAD_SetOnObjectCreated 같은 단일 슬롯은 호스트 것을 덮어써서 플러그인이 쓰면 안 된다)
+    void onEngineEvent(int kind, unsigned int id, void*) {
+        if (kind == 1) std::printf("[HelloPlugin] 객체 생성 id=%u\n", id);
+        else if (kind == 2) std::printf("[HelloPlugin] 객체 삭제 id=%u\n", id);
+    }
+
     // .lot 을 열어 우리 딱지가 붙은 객체가 복원됐을 때. 형상은 이미 엔진이 올렸다 —
     // 여기서는 정의를 읽어 "살아 있는 벽" 으로 넘겨받는다(지금은 확인만 찍는다).
     void onEntityLoaded(unsigned int id, const char* owner, const char* type, const char* data) {
@@ -137,15 +156,28 @@ LOT_PLUGIN_ABI_EXPORT bool CAD_PluginLoad(unsigned int pluginId) {
     CAD_AddUiItem(2, "건축/벽체", "벽",     "wall",      "", g_id);
     CAD_AddUiItem(2, "건축/벽체", "두께x2", "wallthick", "", g_id);
 
+    // 특성창에 벽의 값을 노출한다 — 플러그인은 UI 를 그리지 않고 "무엇이 있는지" 만 말한다.
+    // 값은 딱지 data 의 JSON 키와 같은 이름이어야 엔진이 찾는다.
+    CAD_AddEntityProperty(kOwner, "wall", "length", "길이", 0, 0.1f, 20.0f, g_id);
+    CAD_AddEntityProperty(kOwner, "wall", "thick",  "두께", 0, 0.05f, 2.0f,  g_id);
+    CAD_AddEntityProperty(kOwner, "wall", "height", "높이", 0, 0.1f, 10.0f,  g_id);
+
     // 열기 알림 — 우리 엔티티가 복원되면 정의를 돌려받는다.
     CAD_SetOnPluginEntityLoaded(&onEntityLoaded);
+    // 값이 바뀌면 형상을 다시 만든다.
+    CAD_SetOnPluginEntityChanged(&onEntityChanged);
+    // 객체 생성/삭제 구독 (1|2). 언로드 때는 엔진이 pluginId 로 묶어 알아서 지운다.
+    CAD_AddEventListener(1 | 2, &onEngineEvent, nullptr, g_id);
 
     std::printf("[HelloPlugin] 로드됨 (id=%u)\n", g_id);
     return true;
 }
 
 LOT_PLUGIN_ABI_EXPORT void CAD_PluginUnload(void) {
-    CAD_SetOnPluginEntityLoaded(nullptr);   // 콜백은 등록부와 달리 엔진이 안 지운다 — 직접 뗀다
+    // 콜백은 등록부와 달리 엔진이 안 지운다 — 직접 뗀다.
+    // (이벤트 리스너·속성·명령·UI 는 pluginId 로 묶여 엔진이 지운다)
+    CAD_SetOnPluginEntityLoaded(nullptr);
+    CAD_SetOnPluginEntityChanged(nullptr);
     std::printf("[HelloPlugin] 언로드됨\n");
 }
 
