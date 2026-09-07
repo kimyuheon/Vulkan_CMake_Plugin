@@ -6,8 +6,24 @@
 # Qt 를 못 찾으면 경로를 알려 준다:
 #   cmake -B build -DCMAKE_PREFIX_PATH=/path/to/Qt/6.x.x/gcc_64
 
+# 이 폴더만 단독으로 열어도(Qt Creator 로 QtPlugin/CMakeLists.txt 를 여는 경우) 지어진다.
+# 최상위에서 add_subdirectory 로 들어올 때는 이 블록을 건너뛴다 — project() 가 두 번
+# 불리면 안 되고, 규칙(add_vulkancad_plugin)은 이미 위에서 들어와 있다.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    cmake_minimum_required(VERSION 3.16)
+    project(QtPlugin CXX)
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+    include(VulkanCADPlugin)
+endif()
+
 find_package(QT NAMES Qt6 Qt5 QUIET COMPONENTS Widgets)
 if(NOT QT_FOUND)
+    if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+        # 단독으로 열었으면 지을 게 이것뿐이다 — 조용히 빠지면 안 된다.
+        message(FATAL_ERROR "Qt 를 찾을 수 없습니다 (-DCMAKE_PREFIX_PATH=<Qt 경로>)")
+    endif()
     message(STATUS "QtPlugin: Qt 를 못 찾아 건너뜁니다 (-DCMAKE_PREFIX_PATH=<Qt 경로>)")
     return()
 endif()

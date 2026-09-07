@@ -55,7 +55,7 @@ cmake -B build -DCMAKE_PREFIX_PATH=~/Qt/6.7.0/gcc_64
 
 ## 설치
 
-빌드된 파일을 엔진 실행 파일 옆 `plugins/` 에 넣습니다. 엔진이 시작할 때 자동으로 훑습니다.
+빌드된 파일을 `plugins/` 에 넣습니다. 엔진이 시작할 때 자동으로 훑습니다.
 
 ```
 VulkanApp.exe
@@ -64,6 +64,23 @@ plugins/
   HelloPlugin.so       ← Linux
   HelloPlugin.dylib    ← macOS
 ```
+
+**⚠️ 기준은 실행 파일 위치가 아니라 "현재 작업 디렉터리" 입니다.** 엔진은
+`loadPlugins("plugins")` 를 **상대 경로**로 부르고, `std::filesystem` 이 그걸 CWD 기준으로
+풉니다. exe 를 더블클릭하면 둘이 우연히 같아서 티가 안 나지만, IDE 나 스크립트로 띄우면
+갈립니다 — 다른 폴더에서 엔진을 띄우면 플러그인은커녕 모델·텍스처도 못 찾아
+`CAD_CreateEngine` 부터 실패합니다(실측).
+
+호스트가 `CAD_SetRuntimeAssetPath` 를 부르면 그 함수가 **진짜 chdir**(`current_path`) 이라,
+그 뒤로는 그 폴더가 기준이 됩니다. 그래서 실제로 넣을 곳은 이렇게 갈립니다.
+
+| 어떻게 띄우나 | plugins/ 를 둘 곳 |
+|---|---|
+| 엔진 단독(`VulkanApp`) | 엔진 빌드 폴더 — 거기서 실행하는 것이 전제 |
+| 호스트 임베드(샘플 레포의 `qml_test` 등) | 호스트가 `CAD_SetRuntimeAssetPath` 로 넘긴 폴더 = `sdk/plugins` |
+
+CMake 로 지으면 **찾을 수 있는 곳 전부에 자동으로 복사**합니다(`cmake -B ...` 출력에 경로가
+찍힙니다). 끄려면 `-DVULKANCAD_PLUGINS_DIR=`, 직접 정하려면 그 변수에 폴더들을 `;` 로 줍니다.
 
 ## 주의할 것
 
@@ -196,25 +213,86 @@ else { new QApplication(g_argc, g_argv); }                         // 우리가 
 cmake -B build && cmake --build build          # 최상위에서 같이 지어진다
 ```
 
-**Qt Creator 로 열려면** `QtPlugin/QtPlugin.pro` 를 엽니다 (`CMakeLists.txt` 를 열어도
-됩니다 — Qt Creator 는 둘 다 프로젝트로 읽습니다). 엔진 경로가 다르면 qmake 인자로 줍니다.
+**Qt Creator 로 열려면** `QtPlugin/QtPlugin.pro` 나 `QtPlugin/CMakeLists.txt` 를 엽니다.
+둘 다 **단독으로** 열립니다 — CMake 쪽은 최상위와 같은 규칙 모듈(`cmake/VulkanCADPlugin.cmake`)을
+가져다 쓰므로 최상위에서 지을 때와 결과가 같습니다.
+
+처음 열면 *Configure Project* 화면이 나옵니다.
+
+1. **Desktop** 킷만 체크합니다 (`Python 3.12.3` 같은 건 끕니다 — C++ 플러그인입니다)
+2. Debug/Release 중 쓸 것만 남겨도 됩니다
+3. **Configure Project**
+
+엔진 레포를 옆에 나란히 클론했다면 그대로 빌드됩니다. 아니면 경로를 알려 줍니다.
+
+| 여는 방식 | 어디서 고치나 |
+|---|---|
+| CMakeLists.txt | 프로젝트 → 빌드 → CMake → `VULKANCAD_ENGINE` |
+| QtPlugin.pro | 프로젝트 → 빌드 → qmake → 추가 인자에 `VULKANCAD_ENGINE=<경로>` |
+
+명령행이면 이렇습니다.
 
 ```bash
-qmake6 VULKANCAD_ENGINE=<엔진 경로> && make
+qmake6 VULKANCAD_ENGINE=<엔진 경로> && make      # qmake
+cmake -B build -S QtPlugin -DVULKANCAD_ENGINE=<엔진 경로>   # CMake 단독
 ```
+
+### Qt Creator 에서 바로 실행·디버깅
+
+플러그인은 실행 파일이 아니라 라이브러리라, IDE 가 저절로 실행해 주지는 않습니다.
+**엔진을 실행 파일로 지정**하면 됩니다 — ObjectARX 에서 디버그 대상을 `acad.exe` 로
+잡는 것과 같습니다. 두 가지가 필요합니다.
+
+**1. 빌드 결과가 엔진 옆으로 가야 한다** — 이건 자동입니다. 엔진 빌드 폴더를 찾으면
+빌드할 때마다 거기 `plugins/` 로 복사합니다(`cmake -B ...` 출력에 경로가 찍힙니다).
+
+```
+-- 플러그인 설치 위치: <엔진>/build/plugins
+-- IDE 실행 설정 — 실행 파일: <엔진>/build/VulkanApp
+-- IDE 실행 설정 — 작업 디렉터리: <엔진>/build
+```
+
+끄려면 `-DVULKANCAD_PLUGINS_DIR=`(빈 값), 다른 곳에 넣으려면 그 경로를 줍니다.
+
+**⚠️ 작업 디렉터리가 중요합니다.** 엔진은 `loadPlugins("plugins")` 를 **상대 경로**로
+부릅니다. 기준이 실행 파일 위치가 아니라 **작업 디렉터리**라, 거기를 엔진 빌드 폴더로
+맞춰야 플러그인이 보입니다.
+
+**2. 실행 설정을 한 번 만든다** — 프로젝트 → 실행 → 추가 → **Custom Executable**:
+
+| 항목 | 값 |
+|---|---|
+| 실행 파일 | `<엔진>/build/VulkanApp` |
+| 작업 디렉터리 | `<엔진>/build` |
+
+이제 **실행(Ctrl+R)** 이면 빌드 → 복사 → 엔진 실행까지 갑니다. **디버그(F5)** 도 그대로
+됩니다 — `qt_plugin.cpp` 에 중단점을 걸면 플러그인이 아직 로드되기 전이라 pending 으로
+잡혀 있다가, 엔진이 `plugins/` 를 훑어 `dlopen` 하는 순간 붙습니다.
 
 `.pro` 는 `no_plugin_name_prefix` 로 `lib` 접두사를 뗍니다 — 엔진 로더는 확장자로만
 거르므로 `libQtPlugin.so` 가 아니라 `QtPlugin.so` 여야 자연스럽습니다(CMake 쪽과 같은 규칙).
 
 ### 실측
 
-Qt 6.4.2 / Linux. 엔진 계약과 같은 모양의 하네스로 플러그인을 `dlopen(RTLD_NOW|RTLD_LOCAL)`
-해서 잰 값입니다(엔진 로더와 같은 플래그).
+Qt 6.4.2 / Linux(Wayland). 두 가지로 쟀습니다 — **진짜 엔진**을 띄워서, 그리고 엔진 계약과
+같은 모양의 하네스로 `dlopen(RTLD_NOW|RTLD_LOCAL)` 해서(엔진 로더와 같은 플래그).
+
+진짜 엔진에서:
+
+| 확인한 것 | 결과 |
+|---|---|
+| 엔진이 `plugins/` 를 훑어 로드 | `[plugin] 로드: QtPlugin (id=2)` — HelloPlugin 과 나란히 붙는다 |
+| 명령 실행 뒤 프로세스 상태 | 대화상자를 닫을 때까지 **반환하지 않는다**(모달, 설계대로) |
+| 그때 프로세스가 올린 것 | `libQt6Widgets` + `libQt6WaylandClient` + EGL 통합 → **진짜 네이티브 창**이다 |
+
+즉 GLFW/Vulkan 이 이미 도는 프로세스 안에서 Qt 가 자기 플랫폼을 따로 올려 창을 띄웁니다.
+둘은 각자의 연결로 컴포지터와 이야기하므로 서로의 이벤트를 훔치지 않습니다.
+
+하네스에서(경계 조건들):
 
 | 확인한 것 | 결과 |
 |---|---|
 | Qt 호스트 위에서 명령 실행 | 20ms 만에 반환, 창은 떠 있음 → **호스트 루프가 안 막힌다** |
-| GLFW 엔진에서 명령 실행 | 창을 닫을 때까지 반환하지 않음 → **모달. 그동안 엔진은 멈춘다** |
 | 중첩 루프 안에서 큐 이벤트 | 돈다 (`exec()` 가 진짜 이벤트 루프다) |
 | 언로드 뒤 `dlclose` | 코드가 **실제로 언매핑된다** — Qt 를 띄운 뒤에도 |
 | 언로드 → 재로드 | 명령이 다시 모달로 동작 |
