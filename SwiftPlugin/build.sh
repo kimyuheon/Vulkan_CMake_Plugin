@@ -40,28 +40,49 @@ case "$(uname -s)" in
         ;;
 esac
 
-if [[ "${1:-release}" == "debug" ]]; then
-    OPT=(-Onone -g)
-else
-    OPT=(-O)
-fi
-
 # -swift-version 5 를 못 박는다. Swift 6 언어 모드는 전역 가변 변수를 동시성 위반으로
 # 막는데(pluginId, counterRef …), 플러그인은 계약상 **엔진 스레드 한 곳**에서만 불린다.
 # 6 모드로 옮기려면 그 전역들을 격리하거나 nonisolated(unsafe) 를 붙여야 한다.
-set -x
-swiftc "${OPT[@]}" \
-    -swift-version 5 \
-    -emit-library \
-    -module-name SwiftPlugin \
-    -o "$OUT" \
-    -I "$HERE/include" \
-    -Xcc -I"$ENGINE" \
-    "${LINK[@]}" \
-    "$HERE/SwiftPlugin.swift" \
-    "$HERE/WallWindow.swift"
-set +x
+COMMON=(-swift-version 5
+        -module-name SwiftPlugin
+        -I "$HERE/include"
+        -Xcc -I"$ENGINE")
+SOURCES=("$HERE/SwiftPlugin.swift" "$HERE/WallWindow.swift")
+
+if [[ "${1:-release}" != "debug" ]]; then
+    set -x
+    swiftc -O "${COMMON[@]}" -emit-library -o "$OUT" "${LINK[@]}" "${SOURCES[@]}"
+    set +x
+elif [[ "$(uname -s)" == "Darwin" ]]; then
+    # ⚠️ 디버그는 **두 단계**로 짓는다. 한 번에 -g -emit-library 로 지으면 lldb 가 줄을
+    #    못 짚는다(실측: breakpoint 가 <compiler-generated> 로만 잡힌다).
+    #    Mach-O 는 DWARF 를 실행물에 넣지 않고 "디버그맵"(OSO 항목)으로 .o 를 가리키는데,
+    #    swiftc 는 그 .o 를 임시 폴더에 만들고 링크가 끝나면 **지워 버린다.** 가리키는
+    #    곳이 없어지니 줄 정보도 같이 사라진다. (ELF/Linux 는 DWARF 가 .so 안에 들어가서
+    #    이 문제가 없다 — 그래서 아래 else 는 한 단계다)
+    #    그래서 .o 를 남기고, dsymutil 로 DWARF 를 .dSYM 에 모아 자립시킨다.
+    #    -wmo 는 .o 를 하나로 만들려는 것뿐이다(-c 는 파일마다 -o 를 못 준다).
+    mkdir -p "$HERE/.build-debug"
+    set -x
+    swiftc -Onone -g "${COMMON[@]}" -wmo -c -o "$HERE/.build-debug/SwiftPlugin.o" "${SOURCES[@]}"
+    swiftc -emit-library -o "$OUT" "${LINK[@]}" "$HERE/.build-debug/SwiftPlugin.o"
+    dsymutil "$OUT"
+    set +x
+else
+    set -x
+    swiftc -Onone -g "${COMMON[@]}" -emit-library -o "$OUT" "${LINK[@]}" "${SOURCES[@]}"
+    set +x
+fi
 
 echo
 echo "빌드됨: $OUT"
 echo "설치:   cp \"$OUT\" <엔진 실행 파일 옆>/plugins/"
+if [[ "${1:-release}" == "debug" ]]; then
+    echo
+    echo "디버깅: 플러그인은 실행 파일이 아니다 — 엔진을 띄우고 붙는다."
+    echo "  lldb <엔진 실행 파일 옆>/VulkanApp"
+    echo "  (lldb) breakpoint set --file SwiftPlugin.swift --line 1  # 로드 전이라 pending"
+    echo "  (lldb) run"
+    echo "⚠️ C 심볼(CAD_PluginLoad)이 아니라 Swift 이름(pluginLoad)이나 파일:줄로 잡는다 —"
+    echo "   @_cdecl 이 만드는 건 썽크라 줄 정보가 없다."
+fi

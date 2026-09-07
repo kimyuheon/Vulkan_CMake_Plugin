@@ -190,6 +190,43 @@ cp SwiftPlugin.dylib <엔진 실행 파일 옆>/plugins/
 빌드가 CMake 가 아닌 이유: CMake 의 Swift 지원은 **Ninja/Xcode 제너레이터 전용**이라,
 최상위에 넣으면 위의 `cmake -B build`(기본 Makefile 제너레이터)가 깨집니다.
 
+### 디버깅
+
+플러그인은 `.dylib` 이라 혼자 못 뜹니다. **디버기는 엔진이고**, 플러그인은 엔진이 `dlopen`
+할 때 붙습니다 — MFC/WPF 예제가 vcxproj 의 "디버깅 명령" 에 엔진 exe 를 걸어 두는 것과
+같은 얼개입니다.
+
+VS Code 는 `.vscode/launch.json` 이 들어 있어 **F5 하나면** 됩니다(CodeLLDB 확장 필요).
+짓고 → `plugins/` 에 설치하고 → 엔진을 띄웁니다. lldb 를 직접 쓰면:
+
+```
+./build.sh debug
+lldb <엔진 실행 파일 옆>/VulkanApp
+(lldb) breakpoint set --file SwiftPlugin.swift --line 232   # 아직 로드 전이라 pending
+(lldb) run
+```
+
+브레이크포인트를 **로드 전에** 걸어도 됩니다. 없는 모듈이라 pending 으로 남았다가 엔진이
+`dlopen` 하는 순간 풀립니다.
+
+```
+* frame #0: SwiftPlugin.dylib`pluginLoad(id=1) at SwiftPlugin.swift:232:11
+  frame #1: SwiftPlugin.dylib`CAD_PluginLoad at <compiler-generated>:0
+  frame #2: libVulkanCADCore.dylib`lot::PluginManager::load(...)
+(lldb) frame variable id     → (UInt32) id = 1
+(lldb) expression pluginId   → (UInt32) $R0 = 1
+```
+
+**⚠️ 디버그 빌드는 두 단계로 짓습니다.** 한 번에 `-g -emit-library` 로 지으면 lldb 가 줄을
+못 짚습니다(`<compiler-generated>` 로만 잡힙니다). Mach-O 는 DWARF 를 실행물에 넣지 않고
+"디버그맵" 으로 `.o` 를 가리키는데, swiftc 가 그 `.o` 를 임시 폴더에 만들고 링크가 끝나면
+**지워 버리기** 때문입니다. `build.sh debug` 는 `.o` 를 남기고 `dsymutil` 로 `.dSYM` 을 만들어
+자립시킵니다 — 엔진 옆으로 옮길 때 **`.dSYM` 도 같이** 가야 합니다.
+(Linux/ELF 는 DWARF 가 `.so` 안에 들어가서 이 문제가 없습니다)
+
+**⚠️ C 심볼에 직접 걸면 줄이 안 나옵니다.** `@_cdecl` 이 만드는 `CAD_PluginLoad` 는 썽크라
+`<compiler-generated>` 입니다. Swift 이름(`pluginLoad`)이나 파일:줄로 잡으세요.
+
 ### macOS 는 창 띄우기가 WPF 보다 쉽습니다
 
 WPF 는 엔진 주 스레드가 STA 도 Dispatcher 도 아니라 **전용 STA 스레드**를 파야 했습니다.

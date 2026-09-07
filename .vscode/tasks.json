@@ -1,0 +1,22 @@
+{
+    // SwiftPlugin 을 디버그로 짓고 엔진 옆 plugins/ 에 설치한다.
+    // .dSYM 도 같이 옮긴다 — Mach-O 는 DWARF 가 실행물 밖에 있어서, 이게 없으면
+    // lldb 가 함수는 찾아도 **줄을 못 짚는다**(SwiftPlugin/build.sh 의 설명 참조).
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "SwiftPlugin 빌드+설치",
+            "type": "shell",
+            "command": "./build.sh debug && mkdir -p \"$ENGINE_BUILD/plugins\" && cp -R SwiftPlugin.dylib SwiftPlugin.dylib.dSYM \"$ENGINE_BUILD/plugins/\"",
+            "options": {
+                "cwd": "${workspaceFolder}/SwiftPlugin",
+                "env": {
+                    // 엔진을 옆에 나란히 클론하지 않았다면 여기만 고친다.
+                    "ENGINE_BUILD": "${workspaceFolder}/../3dEngine/build"
+                }
+            },
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
