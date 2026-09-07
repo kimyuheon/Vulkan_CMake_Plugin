@@ -3,3 +3,8 @@ build/
 CMakeCache.txt
 CMakeFiles/
 *.user
+
+# Visual Studio (WallDialogPlugin 은 vcxproj 로 짓는다)
+x64/
+*.vcxproj.user
+*.aps

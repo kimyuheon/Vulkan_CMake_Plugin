@@ -62,3 +62,7 @@ function(add_vulkancad_plugin target)
 endfunction()
 
 add_subdirectory(HelloPlugin)
+
+# WallDialogPlugin(MFC 대화상자 예제)은 CMake 로 안 짓는다 — WallDialogPlugin/*.sln 참조.
+# MFC 는 Windows 전용이라 크로스 플랫폼을 흉내 낼 이유가 없고, 대화상자를 리소스
+# 편집기로 디자인하려면 vcxproj 가 자연스럽다(샘플 레포의 mfc_dlg_test 와 같은 방식).
