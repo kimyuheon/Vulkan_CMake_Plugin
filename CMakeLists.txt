@@ -66,3 +66,8 @@ add_subdirectory(HelloPlugin)
 # WallDialogPlugin(MFC 대화상자 예제)은 CMake 로 안 짓는다 — WallDialogPlugin/*.sln 참조.
 # MFC 는 Windows 전용이라 크로스 플랫폼을 흉내 낼 이유가 없고, 대화상자를 리소스
 # 편집기로 디자인하려면 vcxproj 가 자연스럽다(샘플 레포의 mfc_dlg_test 와 같은 방식).
+#
+# SwiftPlugin 도 CMake 로 안 짓는다 — SwiftPlugin/build.sh 참조.
+# CMake 의 Swift 지원은 **Ninja/Xcode 제너레이터 전용**이라 여기에 넣으면 README 가
+# 안내하는 `cmake -B build`(기본 Makefile 제너레이터)가 통째로 깨진다. swiftc 직접
+# 호출이면 그 제약이 없고, 플래그도 세 줄이라 감쌀 이유가 없다.

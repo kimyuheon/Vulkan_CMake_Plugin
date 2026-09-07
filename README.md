@@ -129,6 +129,7 @@ CAD_AddEventListener(1 | 2, &onEvent, nullptr, id);   // 1=생성 2=삭제 4=선
 | `HelloPlugin` | CMake (3 OS) | 명령·메뉴·툴바·리본·엔티티·속성·이벤트 — ImGui 없이 |
 | `WallDialogPlugin` | vcxproj (Windows) | 플러그인이 **자기 MFC 대화상자**를 띄운다 |
 | `WpfPlugin` | vcxproj + dotnet (Windows) | **C#/WPF** 플러그인 — 네이티브 새시가 .NET 런타임을 띄운다 |
+| `SwiftPlugin` | swiftc (macOS/Linux) | **Swift** 플러그인 — 새시 없이 바로 붙는다 + 자기 Cocoa 창 |
 
 ## C# / WPF 플러그인
 
@@ -158,6 +159,86 @@ C++ 플러그인은 실행 중 언로드가 됩니다.
 
 **⚠️ WPF 창은 STA 스레드에서만 뜹니다.** 엔진의 주 스레드는 STA 도 아니고 Dispatcher 도
 없어서, 전용 STA 스레드를 만들어 거기서 띄우고 닫힐 때까지 기다립니다(모달처럼).
+
+## Swift 플러그인
+
+**새시가 없습니다.** C# 은 네이티브 DLL 이 .NET 런타임을 띄워야 했지만, Swift 는 그 층이
+통째로 없습니다. `@_cdecl` 이 심볼을 C 이름 그대로 내보내고 `swiftc -emit-library` 가 평범한
+`.dylib` 을 만듭니다 — 엔진은 이게 `HelloPlugin` 인지 `SwiftPlugin` 인지 구분하지 못합니다.
+
+```swift
+@_cdecl("CAD_PluginAbiVersion")
+public func pluginAbiVersion() -> UInt32 { LOT_PLUGIN_ABI_VERSION }
+
+@_cdecl("CAD_PluginLoad")
+public func pluginLoad(_ id: UInt32) -> Bool {
+    CAD_RegisterCommand("swall", "벽 만들기", onWall, nil, id)
+    CAD_AddUiItem(0, "건축(Swift)", "벽 만들기", "swall", "", id)
+    return true
+}
+```
+
+엔진 헤더는 **래퍼 한 줄 없이** 그대로 씁니다. modulemap 한 장이면 `import VulkanCAD` 로
+명령 200개가 전부 열립니다. 계약이 C++ 인터페이스가 아니라 **순수 C** 라서 되는 일입니다 —
+`lot_plugin_sdk.h` 가 "지금은 C API 만 쓴다" 고 정해 둔 결정의 배당금입니다.
+
+```bash
+cd SwiftPlugin && ./build.sh
+cp SwiftPlugin.dylib <엔진 실행 파일 옆>/plugins/
+```
+
+빌드가 CMake 가 아닌 이유: CMake 의 Swift 지원은 **Ninja/Xcode 제너레이터 전용**이라,
+최상위에 넣으면 위의 `cmake -B build`(기본 Makefile 제너레이터)가 깨집니다.
+
+### macOS 는 창 띄우기가 WPF 보다 쉽습니다
+
+WPF 는 엔진 주 스레드가 STA 도 Dispatcher 도 아니라 **전용 STA 스레드**를 파야 했습니다.
+macOS 에는 그 우회가 필요 없습니다. 엔진 루프의 `glfwPollEvents` 가
+
+```objc
+while (e = [NSApp nextEventMatchingMask:NSEventMaskAny ... dequeue:YES])
+    [NSApp sendEvent:e];
+```
+
+즉 **프로세스의 NSApp 큐를 통째로 비워 각 창으로 라우팅**하기 때문에, 플러그인이 만든
+NSWindow 는 엔진 루프를 그냥 얻어 탑니다. 스레드도 모달 루프도 우리가 만들지 않습니다.
+
+GLFW 와 같은 모양의 논블로킹 펌프를 재현해 실측한 결과입니다.
+
+| 확인한 것 | 결과 |
+|---|---|
+| 명령에서 연 NSWindow | 뜬다 |
+| 펌프 1초 뒤 `viewsNeedDisplay` | 예 → **아니오** (표시 사이클이 실제로 돌았다) |
+| NSApp 큐에 넣은 진짜 클릭 | 펌프 → 창 → 버튼 → `CAD_CreateMesh` 까지 도달 |
+
+다만 AppKit 은 **주 스레드 전용**입니다. 명령 콜백은 엔진 스레드에서 오고 macOS 에서 그건
+주 스레드지만, 예제는 그 가정을 `Thread.isMainThread` 로 명시적으로 확인합니다.
+모달(`NSApp.runModal`)은 일부러 안 씁니다 — 중첩 런루프가 엔진 프레임을 멈춰 세웁니다.
+
+### 걸리는 것
+
+**⚠️ 언로드해도 실제로는 안 내려갑니다.** `dlclose` 는 0 을 돌려주는데 `dladdr` 로 보면 코드가
+여전히 매핑돼 있고, 다시 `dlopen` 하면 **같은 핸들**이 옵니다. 순수 C 플러그인은 같은
+시험에서 진짜로 언매핑됩니다 — 차이는 **Swift 런타임 자체**입니다(AppKit 을 뺀 빌드도
+같았습니다. ObjC 때문이 아닙니다).
+
+죽지는 않습니다. 다만 재로드해도 전역이 **이전 값 그대로**이고 `let` 전역의 초기화도 다시
+돌지 않습니다(`swift_once` 는 이미 돌았습니다). 되돌릴 것은 `CAD_PluginUnload` 에서 손으로
+되돌려야 합니다. .NET 이 아예 못 내려가는 것보다는 낫고, C++ 플러그인이 진짜로 내려가는
+것보다는 못합니다.
+
+**⚠️ 문자열 수명이 C++ 예제와 다릅니다.** Swift 의 `String` → `const char*` 브리징은 **호출
+동안만 유효한 임시 포인터**입니다. C++ 예제는 전부 문자열 리터럴(정적 수명)이라 이 차이가
+드러나지 않습니다. 엔진은 경계에서 전부 `std::string` 으로 복사하므로 지금은 안전하지만,
+C API 를 새로 쓸 때 이 규약을 깨면 Swift/C# 플러그인이 먼저 죽습니다.
+
+**⚠️ 콜백은 캡처를 못 합니다.** `@convention(c)` 함수 포인터에는 컨텍스트를 담을 자리가
+없습니다. 상태는 전역이거나 `void* user` 에 실어 보냅니다 — 예제가
+`Unmanaged.passRetained` / `release` 짝으로 보여줍니다.
+
+**⚠️ 런타임 배포는 macOS 만 공짜입니다.** Swift 5 ABI 안정화 이후 macOS 는 런타임이 OS 에
+들어 있어(`/usr/lib/swift`) 재배포가 0 입니다. Linux 는 `libswiftCore.so` 를 같이 깔거나
+`-static-stdlib` 로 박아야 합니다.
 
 ## 안 되는 것
 

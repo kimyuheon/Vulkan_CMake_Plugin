@@ -10,3 +10,11 @@ x64/
 *.aps
 obj/
 bin/
+
+# SwiftPlugin 은 build.sh 가 소스 옆에 바로 떨군다 (CMake 처럼 build/ 를 안 판다)
+*.dylib
+*.so
+*.swiftmodule
+*.swiftdoc
+*.swiftsourceinfo
+*.abi.json

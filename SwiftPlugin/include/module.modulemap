@@ -1,0 +1,11 @@
+// 엔진의 C 헤더를 Swift 모듈로 노출한다. 래퍼 코드는 한 줄도 없다 —
+// 계약이 순수 C 라서 Swift 의 clang 임포터가 헤더를 그대로 읽는다.
+//
+//   import VulkanCAD
+//   CAD_RegisterCommand("swall", "벽", onWall, nil, id)
+//
+// 헤더의 실제 위치(api/, plugin/)는 -Xcc -I<엔진경로> 로 알려 준다. build.sh 참조.
+module VulkanCAD {
+    header "VulkanCAD.h"
+    export *
+}
