@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{2D8F4A63-51C7-4B9E-8E2A-6C1B7F30D944}</ProjectGuid>
+    <RootNamespace>WpfBridgePlugin</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="VulkanCAD">
+    <VulkanCADEngine Condition="'$(VulkanCADEngine)'==''">$(SolutionDir)..\..\3dEngine</VulkanCADEngine>
+    <VulkanCADLibDir Condition="'$(VulkanCADLibDir)'==''">$(VulkanCADEngine)\build\$(Configuration)</VulkanCADLibDir>
+    <!-- .NET 호스팅 헤더/라이브러리(nethost). SDK 를 설치하면 여기 있다.
+         버전이 다르면 이 값만 바꾸면 된다. -->
+    <!-- ⚠️ $(ProgramFiles) 는 32비트 MSBuild 에서 "Program Files (x86)" 로 잡힌다 —
+         64비트 경로는 $(ProgramW6432). 없으면 $(ProgramFiles) 로 떨어진다. -->
+    <DotnetRoot Condition="'$(DotnetRoot)'=='' AND '$(ProgramW6432)'!=''">$(ProgramW6432)\dotnet</DotnetRoot>
+    <DotnetRoot Condition="'$(DotnetRoot)'==''">$(ProgramFiles)\dotnet</DotnetRoot>
+    <DotnetHostPack Condition="'$(DotnetHostPack)'==''">$(DotnetRoot)\packs\Microsoft.NETCore.App.Host.win-x64\8.0.4\runtimes\win-x64\native</DotnetHostPack>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
+            Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <PropertyGroup>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>WpfBridgePlugin</TargetName>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(VulkanCADEngine);$(DotnetHostPack);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>VulkanCADCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VulkanCADLibDir);$(DotnetHostPack);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile><PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemGroup><ClCompile Include="native\wpf_bridge_plugin.cpp" /></ItemGroup>
+
+  <!-- 관리 어셈블리를 같이 빌드해 새시 옆에 둔다.
+       엔진은 plugins/ 에서 WpfBridgePlugin.dll 을 찾고, 새시는 자기 옆에서
+       WpfPlugin.dll 과 runtimeconfig 를 찾는다. -->
+  <Target Name="BuildManaged" BeforeTargets="Build">
+    <Exec Command="dotnet build &quot;$(ProjectDir)managed\WpfPlugin.csproj&quot; -c $(Configuration) -o &quot;$(OutDir)WpfPlugin&quot;" />
+  </Target>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

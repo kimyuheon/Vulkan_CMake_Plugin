@@ -8,3 +8,5 @@ CMakeFiles/
 x64/
 *.vcxproj.user
 *.aps
+obj/
+bin/

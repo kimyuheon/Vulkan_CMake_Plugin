@@ -122,8 +122,45 @@ CAD_AddEventListener(1 | 2, &onEvent, nullptr, id);   // 1=생성 2=삭제 4=선
 `CAD_SetOnObjectCreated` 같은 단일 슬롯은 **쓰지 마세요.** 호스트가 걸어 둔 것을
 덮어씁니다. 플러그인은 여러 개가 동시에 올라오므로 목록형인 위쪽을 씁니다.
 
+## 예제 셋
+
+| 예제 | 빌드 | 보여주는 것 |
+|---|---|---|
+| `HelloPlugin` | CMake (3 OS) | 명령·메뉴·툴바·리본·엔티티·속성·이벤트 — ImGui 없이 |
+| `WallDialogPlugin` | vcxproj (Windows) | 플러그인이 **자기 MFC 대화상자**를 띄운다 |
+| `WpfPlugin` | vcxproj + dotnet (Windows) | **C#/WPF** 플러그인 — 네이티브 새시가 .NET 런타임을 띄운다 |
+
+## C# / WPF 플러그인
+
+C# 은 두 갈래가 있습니다.
+
+**NativeAOT** — C# 을 네이티브 DLL 로 컴파일하면 엔진이 그냥 로드합니다. 새시가 필요 없고
+가볍지만 **WPF 를 못 씁니다**(NativeAOT 가 지원하지 않습니다).
+
+**런타임 호스팅** — `WpfPlugin` 이 쓰는 방식입니다. 네이티브 새시(`WpfBridgePlugin`)가
+`hostfxr` 로 .NET 런타임을 띄우고 관리 어셈블리를 불러들입니다. AutoCAD 의 `acmgd.dll` 과
+같은 자리입니다. 엔진 입장에선 그냥 평범한 C++ 플러그인이라 **엔진은 .NET 을 전혀 모릅니다.**
+
+```
+plugins/
+  WpfBridgePlugin.dll        ← 새시 (엔진이 로드)
+  WpfPlugin/                 ← 관리 어셈블리는 하위 폴더에
+    WpfPlugin.dll
+    WpfPlugin.runtimeconfig.json
+```
+
+관리 어셈블리를 `plugins/` 최상위에 두면 엔진 로더가 그것도 네이티브 플러그인인 줄 알고
+열어보다 실패 메시지를 찍습니다. 하위 폴더로 묶으세요.
+
+**⚠️ 언로드가 안 됩니다.** .NET 런타임은 한 번 뜨면 프로세스가 끝날 때까지 못 내립니다.
+AutoCAD 도 `NETLOAD` 한 어셈블리는 재시작해야 내려가니 같은 제약입니다.
+C++ 플러그인은 실행 중 언로드가 됩니다.
+
+**⚠️ WPF 창은 STA 스레드에서만 뜹니다.** 엔진의 주 스레드는 STA 도 아니고 Dispatcher 도
+없어서, 전용 STA 스레드를 만들어 거기서 띄우고 닫힐 때까지 기다립니다(모달처럼).
+
 ## 안 되는 것
 
-C++ 만 지원합니다. C# 플러그인은 엔진이 .NET 런타임을 띄워야 해서 별도 작업입니다.
-다만 C# 이 **호스트**가 되어 엔진을 품는 것은 이미 됩니다
+도킹 패널 내용은 ImGui 가 필요합니다(위 UI 종류 표 참조).
+C# 이 **호스트**가 되어 엔진을 품는 것은 별개로 이미 됩니다
 ([샘플 레포](https://github.com/kimyuheon/Vulkan_CMake_Sample)의 WPF 예제).
