@@ -156,6 +156,18 @@ LOT_PLUGIN_ABI_EXPORT bool CAD_PluginLoad(unsigned int pluginId) {
     CAD_AddUiItem(2, "건축/벽체", "벽",     "wall",      "", g_id);
     CAD_AddUiItem(2, "건축/벽체", "두께x2", "wallthick", "", g_id);
 
+    // 리본(kind 3) — 경로 "탭/그룹". 메뉴바 바로 아래에 가로로 눕는다.
+    CAD_AddUiItem(3, "건축/벽체", "벽",     "wall",      "", g_id);
+    CAD_AddUiItem(3, "건축/벽체", "두께x2", "wallthick", "", g_id);
+    CAD_AddUiItem(3, "건축/기타", "탑",     "tower",     "", g_id);
+    CAD_AddUiItem(3, "보기/화면", "전체보기", "zoom",    "", g_id);
+
+    // 패널(kind 4) — 경로는 도킹 힌트("left"/"right"/"bottom").
+    // ⚠️ 내용을 그리려면 CAD_SetOnDrawPanel + 엔진과 같은 ImGui 를 컴파일해 넣어야 한다.
+    //    이 예제는 ImGui 를 안 들이므로 창만 뜨고 안내 문구가 나온다.
+    //    값 편집만 필요하면 위의 CAD_AddEntityProperty(특성창)가 이 제약을 전부 피한다.
+    CAD_AddUiItem(4, "right", "벽 도구", "", "", g_id);
+
     // 특성창에 벽의 값을 노출한다 — 플러그인은 UI 를 그리지 않고 "무엇이 있는지" 만 말한다.
     // 값은 딱지 data 의 JSON 키와 같은 이름이어야 엔진이 찾는다.
     CAD_AddEntityProperty(kOwner, "wall", "length", "길이", 0, 0.1f, 20.0f, g_id);
