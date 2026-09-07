@@ -63,6 +63,11 @@ endfunction()
 
 add_subdirectory(HelloPlugin)
 
+# QtPlugin 은 Qt 가 있을 때만 지어진다(하위 CMakeLists 가 스스로 판단해 빠진다).
+# Qt 는 CMake 를 1급으로 지원하고 Qt Creator 도 CMakeLists.txt 를 그대로 연다 —
+# MFC/Swift 와 달리 예제를 따로 뺄 이유가 없다. (qmake 로 열고 싶으면 QtPlugin/QtPlugin.pro)
+add_subdirectory(QtPlugin)
+
 # WallDialogPlugin(MFC 대화상자 예제)은 CMake 로 안 짓는다 — WallDialogPlugin/*.sln 참조.
 # MFC 는 Windows 전용이라 크로스 플랫폼을 흉내 낼 이유가 없고, 대화상자를 리소스
 # 편집기로 디자인하려면 vcxproj 가 자연스럽다(샘플 레포의 mfc_dlg_test 와 같은 방식).

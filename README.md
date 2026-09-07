@@ -45,6 +45,14 @@ cmake --build build --config Debug
 
 엔진 레포를 옆에 나란히 클론했다면 `-DVULKANCAD_ENGINE` 은 생략해도 됩니다.
 
+`QtPlugin` 은 **Qt 가 있을 때만** 함께 지어집니다. 못 찾으면 그 예제만 조용히 빠지고
+나머지는 그대로 빌드됩니다 — Qt 하나 때문에 전체가 실패하면 안 되니까요.
+시스템에 없는 Qt(공식 온라인 설치본 등)를 쓰려면 경로를 알려 주세요.
+
+```bash
+cmake -B build -DCMAKE_PREFIX_PATH=~/Qt/6.7.0/gcc_64
+```
+
 ## 설치
 
 빌드된 파일을 엔진 실행 파일 옆 `plugins/` 에 넣습니다. 엔진이 시작할 때 자동으로 훑습니다.
@@ -113,6 +121,9 @@ ImGui 전역과 힙이 공유되지 않기 때문입니다. **호스트 임베�
 값 편집만 필요하면 `CAD_AddEntityProperty`(특성창)가 이 제약을 전부 피합니다.
 패널은 그래프·미리보기처럼 정말 직접 그려야 하는 것에만 쓰세요.
 
+**대화상자는 이 표 밖입니다.** 플러그인이 직접 띄우므로 MFC 든 Win32 든 Qt 든 자유이고,
+ImGui 도 호스트 종류도 상관없습니다 — `WallDialogPlugin`(MFC)과 `QtPlugin`(Qt)이 그 예입니다.
+
 ## 이벤트
 
 ```cpp
@@ -128,6 +139,7 @@ CAD_AddEventListener(1 | 2, &onEvent, nullptr, id);   // 1=생성 2=삭제 4=선
 |---|---|---|
 | `HelloPlugin` | CMake (3 OS) | 명령·메뉴·툴바·리본·엔티티·속성·이벤트 — ImGui 없이 |
 | `WallDialogPlugin` | vcxproj (Windows) | 플러그인이 **자기 MFC 대화상자**를 띄운다 |
+| `QtPlugin` | CMake 또는 qmake (3 OS) | **Qt 위젯 대화상자** — 같은 소스가 GLFW 엔진과 Qt 호스트 둘 다 |
 | `WpfPlugin` | vcxproj + dotnet (Windows) | **C#/WPF** 플러그인 — 네이티브 새시가 .NET 런타임을 띄운다 |
 | `SwiftPlugin` | swiftc (macOS/Linux) | **Swift** 플러그인 — 새시 없이 바로 붙는다 + 자기 Cocoa 창 |
 
@@ -159,6 +171,84 @@ C++ 플러그인은 실행 중 언로드가 됩니다.
 
 **⚠️ WPF 창은 STA 스레드에서만 뜹니다.** 엔진의 주 스레드는 STA 도 아니고 Dispatcher 도
 없어서, 전용 STA 스레드를 만들어 거기서 띄우고 닫힐 때까지 기다립니다(모달처럼).
+
+## Qt 플러그인
+
+`WallDialogPlugin`(MFC)과 **같은 일**을 하지만 Windows·macOS·Linux 에서 다 돕니다.
+어려운 곳은 대화상자가 아니라 **QApplication 부트스트랩**입니다. MFC 는 `CWinApp` 전역
+하나면 끝났지만, Qt 는 상황이 둘로 갈립니다.
+
+| 엔진이 뜬 방식 | qApp | 플러그인이 하는 일 |
+|---|---|---|
+| GLFW 창 (기본) | 없다 | 우리가 `QApplication` 을 만들고 `exec()` 로 **중첩 루프**를 돈다 |
+| Qt 호스트가 `CAD_AttachView` 로 품음 | 이미 있다 | 만들지 않는다. 루프가 이미 도니 **모덜리스**로 띄운다 |
+
+**같은 소스가 둘 다 처리합니다.** `qApp` 이 있는지만 보면 됩니다.
+
+```cpp
+if (QCoreApplication* app = QCoreApplication::instance()) { ... }  // 얹어 탄다
+else { new QApplication(g_argc, g_argv); }                         // 우리가 띄운다
+```
+
+### 빌드 — CMake 든 Qt Creator 든
+
+```bash
+cmake -B build && cmake --build build          # 최상위에서 같이 지어진다
+```
+
+**Qt Creator 로 열려면** `QtPlugin/QtPlugin.pro` 를 엽니다 (`CMakeLists.txt` 를 열어도
+됩니다 — Qt Creator 는 둘 다 프로젝트로 읽습니다). 엔진 경로가 다르면 qmake 인자로 줍니다.
+
+```bash
+qmake6 VULKANCAD_ENGINE=<엔진 경로> && make
+```
+
+`.pro` 는 `no_plugin_name_prefix` 로 `lib` 접두사를 뗍니다 — 엔진 로더는 확장자로만
+거르므로 `libQtPlugin.so` 가 아니라 `QtPlugin.so` 여야 자연스럽습니다(CMake 쪽과 같은 규칙).
+
+### 실측
+
+Qt 6.4.2 / Linux. 엔진 계약과 같은 모양의 하네스로 플러그인을 `dlopen(RTLD_NOW|RTLD_LOCAL)`
+해서 잰 값입니다(엔진 로더와 같은 플래그).
+
+| 확인한 것 | 결과 |
+|---|---|
+| Qt 호스트 위에서 명령 실행 | 20ms 만에 반환, 창은 떠 있음 → **호스트 루프가 안 막힌다** |
+| GLFW 엔진에서 명령 실행 | 창을 닫을 때까지 반환하지 않음 → **모달. 그동안 엔진은 멈춘다** |
+| 중첩 루프 안에서 큐 이벤트 | 돈다 (`exec()` 가 진짜 이벤트 루프다) |
+| 언로드 뒤 `dlclose` | 코드가 **실제로 언매핑된다** — Qt 를 띄운 뒤에도 |
+| 언로드 → 재로드 | 명령이 다시 모달로 동작 |
+
+**언로드가 진짜로 됩니다.** .NET 은 아예 못 내려가고 Swift 는 `dlclose` 가 0 을 돌려주면서도
+매핑이 남았지만, Qt 플러그인은 C++ 플러그인이라 평범하게 내려갑니다. 대신 **조건이 있습니다**
+— 아래 두 가지를 지켜야 합니다.
+
+### 걸리는 것
+
+**⚠️ 우리 위젯은 언로드 때 `delete` 로 지웁니다.** `close()` 만으로는 부족합니다.
+`WA_DeleteOnClose` 의 실제 삭제는 `deleteLater` 라 **이벤트 루프가 한 바퀴 더 돌아야**
+일어나는데, 엔진은 `CAD_PluginUnload` 직후 `dlclose` 를 부르므로 그 한 바퀴가 오지 않습니다.
+남은 창을 Qt 가 나중에 건드리면 사라진 코드(우리 `QDialog` 의 vtable)를 부릅니다.
+실측에서 `close()` 는 언로드 뒤에도 창을 1개 남겼고, `delete` 로 바꿔 0개가 됐습니다.
+
+**⚠️ `QApplication` 은 언로드해도 지우지 않습니다.** 한 프로세스에서 한 번만 만드는 게
+안전합니다. 그래서 **재로드하면 함정이 하나 생깁니다** — 새로 올라온 플러그인이 `qApp` 이
+있는 것만 보고 "호스트가 Qt 구나" 로 오판해, 돌지도 않는 이벤트 루프를 믿고 모덜리스로
+띄우면 창이 그대로 얼어붙습니다. 그래서 "이건 플러그인이 만든 것" 이라는 표식을
+`QApplication` 객체의 동적 속성에 남깁니다. 표식이 앱과 함께 남으므로 재로드해도 사실이
+유지됩니다(위 실측표의 마지막 줄).
+
+**⚠️ 플랫폼 플러그인 경로.** Qt 는 `qwindows.dll` / `libqxcb.so` 를 **실행 파일 옆**에서
+찾습니다. 플러그인은 `plugins/` 안에 있으므로, `QApplication` 을 만들기 **전에**
+자기 폴더를 `QCoreApplication::addLibraryPath` 로 넣어 줍니다. 안 하면
+"could not load the Qt platform plugin" 으로 그 자리에서 abort 합니다.
+
+**⚠️ Qt 초기화는 명령을 처음 부를 때 합니다.** `CAD_PluginLoad` 에서 하지 않습니다 —
+로드는 엔진 시작 중에 일어나고, 쓰지도 않을 Qt 를 그때 올리면 시작이 느려질 뿐 아니라
+플랫폼 플러그인이 없는 환경에서는 **엔진 자체가** 못 뜹니다.
+
+**⚠️ 호스트가 Qt 라면 버전이 같아야 합니다.** 한 프로세스에 Qt5 와 Qt6 이 같이 올라오면
+심볼이 겹쳐 죽습니다. ABI 규칙(같은 컴파일러·같은 구성)이 Qt 에도 그대로 적용됩니다.
 
 ## Swift 플러그인
 
