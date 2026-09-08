@@ -46,11 +46,16 @@ set(VULKANCAD_IMPLIB "" CACHE FILEPATH
 #
 # 그래서 목록으로 둔다. 있는 곳 전부에 넣는다.
 set(_vc_plugins "")
+set(_vc_engine_exe "")
 foreach(_dir "" "Debug" "Release" "RelWithDebInfo")
     foreach(_exe "VulkanApp" "VulkanApp.exe")
         if(EXISTS "${VULKANCAD_ENGINE}/build/${_dir}/${_exe}")
             get_filename_component(_p "${VULKANCAD_ENGINE}/build/${_dir}/plugins" ABSOLUTE)
             list(APPEND _vc_plugins "${_p}")
+            if(NOT _vc_engine_exe)
+                get_filename_component(_vc_engine_exe
+                    "${VULKANCAD_ENGINE}/build/${_dir}/${_exe}" ABSOLUTE)
+            endif()
         endif()
     endforeach()
 endforeach()
@@ -112,6 +117,23 @@ function(add_vulkancad_plugin target)
         target_link_options(${target} PRIVATE "-undefined" "dynamic_lookup")
     endif()
 
+    # Visual Studio 에서 이 플러그인을 시작 프로젝트로 두고 F5 를 누르면 엔진이 뜨게 한다.
+    # ⚠️ Windows 에는 exec 가 없어서 run_engine 런처로는 디버깅이 안 된다(_execv 는 부모를
+    #    끝내고 새 프로세스를 만들어 디버거가 따라오지 못한다). 대신 VS 는 "디버깅 시 실행할
+    #    명령" 을 프로젝트 속성으로 받으므로, 그것을 CMake 가 채워 준다 — ObjectARX 에서
+    #    디버그 대상을 acad.exe 로 잡는 그 설정이다. (Linux/macOS 는 run_engine 이 한다)
+    if(MSVC AND VULKANCAD_ENGINE_EXE)
+        get_filename_component(_vc_dbg_dir "${VULKANCAD_ENGINE_EXE}" DIRECTORY)
+        set_target_properties(${target} PROPERTIES
+            VS_DEBUGGER_COMMAND           "${VULKANCAD_ENGINE_EXE}"
+            VS_DEBUGGER_WORKING_DIRECTORY "${_vc_dbg_dir}")
+    endif()
+
+    # run_engine 으로 실행하기 전에 이 플러그인이 지어져 배치되도록 묶는다.
+    if(TARGET run_engine)
+        add_dependencies(run_engine ${target})
+    endif()
+
     foreach(_p IN LISTS VULKANCAD_PLUGINS_DIR)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${_p}"
@@ -121,3 +143,24 @@ function(add_vulkancad_plugin target)
             VERBATIM)
     endforeach()
 endfunction()
+
+# ── IDE 의 Run 버튼이 누를 것 ──────────────────────────────────────────────
+#
+# 플러그인은 라이브러리라 실행 타겟이 없다. 그래서 IDE 마다 "Custom Executable" 을
+# 손으로 만들어야 하는데, 그 설정이 들어가는 .user 파일은 **PC 마다 다른 파일**이라
+# 버전 관리로 공유되지 않는다(Qt Creator 의 의도된 설계다).
+#
+# 실행 타겟을 **소스로** 두면 그 문제가 사라진다 — 클론해서 열면 어느 PC 에서든
+# 설정 없이 Run/F5 가 된다. run_engine 은 엔진 폴더로 chdir 한 뒤 엔진으로 exec 한다.
+# 작업 디렉터리 함정(에셋·plugins 가 CWD 기준)도 스스로 해결한다. cmake/run_engine.cpp 참조.
+set(VULKANCAD_ENGINE_EXE "${_vc_engine_exe}" CACHE FILEPATH
+    "엔진 실행 파일. 있으면 run_engine 실행 타겟을 만든다")
+
+if(VULKANCAD_ENGINE_EXE AND NOT TARGET run_engine)
+    get_filename_component(_vc_run_dir "${VULKANCAD_ENGINE_EXE}" DIRECTORY)
+    add_executable(run_engine "${CMAKE_CURRENT_LIST_DIR}/run_engine.cpp")
+    target_compile_definitions(run_engine PRIVATE
+        VULKANCAD_ENGINE_EXE="${VULKANCAD_ENGINE_EXE}"
+        VULKANCAD_RUN_DIR="${_vc_run_dir}")
+    message(STATUS "실행 타겟 run_engine → ${VULKANCAD_ENGINE_EXE}")
+endif()

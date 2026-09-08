@@ -258,16 +258,38 @@ cmake -B build -S QtPlugin -DVULKANCAD_ENGINE=<엔진 경로>   # CMake 단독
 부릅니다. 기준이 실행 파일 위치가 아니라 **작업 디렉터리**라, 거기를 엔진 빌드 폴더로
 맞춰야 플러그인이 보입니다.
 
-**2. 실행 설정을 한 번 만든다** — 프로젝트 → 실행 → 추가 → **Custom Executable**:
+**2. 실행 타겟이 이미 있다** — `run_engine`. CMake 가 엔진 실행 파일을 찾으면 자동으로
+만듭니다. 설정할 것이 없습니다.
 
-| 항목 | 값 |
-|---|---|
-| 실행 파일 | `<엔진>/build/VulkanApp` |
-| 작업 디렉터리 | `<엔진>/build` |
+실행 대상에서 `run_engine` 을 고르고 **실행(Ctrl+R)** 이면 빌드 → 배치 → 엔진 실행까지
+갑니다. **디버그(F5)** 도 그대로 됩니다 — `qt_plugin.cpp` 에 중단점을 걸면 플러그인이
+아직 로드되기 전이라 pending 으로 잡혀 있다가, 엔진이 `plugins/` 를 훑어 `dlopen` 하는
+순간 붙습니다(실측).
 
-이제 **실행(Ctrl+R)** 이면 빌드 → 복사 → 엔진 실행까지 갑니다. **디버그(F5)** 도 그대로
-됩니다 — `qt_plugin.cpp` 에 중단점을 걸면 플러그인이 아직 로드되기 전이라 pending 으로
-잡혀 있다가, 엔진이 `plugins/` 를 훑어 `dlopen` 하는 순간 붙습니다.
+```
+Thread 1 "VulkanApp" hit Breakpoint 1, CAD_PluginLoad (pluginId=2)
+    at .../QtPlugin/qt_plugin.cpp:285
+```
+
+`run_engine` 은 15줄짜리 런처입니다(`cmake/run_engine.cpp`). 엔진 폴더로 `chdir` 한 뒤
+엔진으로 **`exec`** 합니다. 자식 프로세스를 새로 띄우면 디버거가 런처에 붙어 있고 엔진을
+놓치지만, `exec` 는 같은 프로세스를 갈아치우므로 디버거가 그대로 따라옵니다.
+작업 디렉터리 함정도 자기가 `chdir` 해서 없앱니다.
+
+**⚠️ 실행 타겟을 소스로 두는 이유**가 이것입니다. IDE 의 실행 설정은 `.user` 파일에
+들어가는데 그건 **PC 마다 다른 파일**이라 버전 관리로 공유되지 않습니다(Qt Creator 의
+의도된 설계입니다). 타겟으로 두면 클론해서 여는 누구나 설정 없이 F5 가 됩니다.
+
+| 플랫폼 | 실행 | 디버깅 |
+|---|---|---|
+| Linux / macOS | `run_engine` | 됨 — 위 실측 |
+| Windows + Visual Studio | — | 됨 — CMake 가 `VS_DEBUGGER_COMMAND` 를 채운다 |
+| Windows + Qt Creator | `run_engine` | Custom Executable 을 한 번 만들어야 한다 |
+
+Windows 에 `exec` 가 없어서 생기는 차이입니다 — `_execv` 는 부모를 끝내고 새 프로세스를
+만들어 디버거가 따라오지 못합니다. 그래서 거기서는 "디버깅 시 실행할 명령" 을 IDE 에
+알려 주는 쪽을 씁니다(실행 파일 `<엔진>/VulkanApp.exe`, 작업 디렉터리 `<엔진 폴더>`).
+ObjectARX 에서 디버그 대상을 `acad.exe` 로 잡는 그 설정과 같습니다.
 
 `.pro` 는 `no_plugin_name_prefix` 로 `lib` 접두사를 뗍니다 — 엔진 로더는 확장자로만
 거르므로 `libQtPlugin.so` 가 아니라 `QtPlugin.so` 여야 자연스럽습니다(CMake 쪽과 같은 규칙).
