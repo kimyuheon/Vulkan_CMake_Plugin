@@ -88,6 +88,10 @@ function(add_lotcad_plugin target)
     # 플러그인은 접두사 없이 이름 그대로 (libFoo.so 가 아니라 Foo.so).
     # 엔진 로더가 확장자로만 거르므로 접두사는 혼란만 준다.
     set_target_properties(${target} PROPERTIES PREFIX "")
+    # macOS 의 MODULE 기본 확장자는 .so 인데 엔진 로더는 macOS 에서 .dylib 만 찾는다 — 그대로면 조용히 안 불렸다(2026-10-10).
+    if(APPLE)
+        set_target_properties(${target} PROPERTIES SUFFIX ".dylib")
+    endif()
 
     # ⚠️ MSVC 는 소스가 UTF-8(BOM)이어도 **실행 문자집합**은 시스템 코드페이지(한글은 949)로
     #    굽는다. 그러면 플러그인이 넘긴 "건축" 이 엔진에선 깨져(???) 보인다 — 실측.
