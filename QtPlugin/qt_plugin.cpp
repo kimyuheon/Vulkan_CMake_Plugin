@@ -17,7 +17,7 @@
 //    같은 소스가 둘 다 처리한다. qApp 이 있는지만 보면 된다.
 
 #include "plugin/lot_plugin_sdk.h"
-#include "api/VulkanCAD_API.h"
+#include "api/LotCAD_API.h"
 
 #include <QApplication>
 #include <QDialog>
@@ -107,7 +107,7 @@ namespace {
     //    qApp 이 있는 것만 보고 "호스트가 Qt 구나" 로 오판한다 → 돌지도 않는 이벤트 루프를
     //    믿고 모덜리스로 띄워 창이 그대로 얼어붙는다(실측으로 잡았다).
     //    표식은 QApplication 과 함께 남으므로 재로드해도 사실이 유지된다.
-    const char* kOwnedProp = "VulkanCAD.QtPlugin.ownsApp";
+    const char* kOwnedProp = "LotCAD.QtPlugin.ownsApp";
     bool g_weOwnApp = false;   // 우리(또는 이전의 우리)가 만든 QApplication 인가
 
     // 이 플러그인 파일이 놓인 폴더. 아래에서 Qt 라이브러리 경로로 쓴다.

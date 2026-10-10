@@ -1,8 +1,8 @@
-﻿// HelloPlugin — VulkanCAD 플러그인 최소 예제.
+﻿// HelloPlugin — LotCAD 플러그인 최소 예제.
 //
 // 이 파일 하나가 플러그인의 전부다. 엔진 소스는 필요 없고 헤더 둘만 참조한다:
 //   plugin/lot_plugin_sdk.h   내보낼 심볼 셋과 ABI 번호
-//   api/VulkanCAD_API.h       엔진에게 시킬 것들 (명령 200개 이상이 여기로 열린다)
+//   api/LotCAD_API.h       엔진에게 시킬 것들 (명령 200개 이상이 여기로 열린다)
 //
 // 보여주는 것:
 //   · 명령 등록      wall / tower / wallthick
@@ -14,7 +14,7 @@
 //    엔진이 owner 로 묶어 한꺼번에 지운다.
 
 #include "plugin/lot_plugin_sdk.h"
-#include "api/VulkanCAD_API.h"
+#include "api/LotCAD_API.h"
 
 #include <cstdio>
 #include <cstring>

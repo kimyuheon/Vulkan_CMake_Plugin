@@ -12,5 +12,5 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "api/VulkanCAD_API.h"     // 엔진에게 시킬 것들
+#include "api/LotCAD_API.h"     // 엔진에게 시킬 것들
 #include "plugin/lot_plugin_sdk.h" // 내보낼 심볼 셋과 ABI 번호

@@ -19,11 +19,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
   <!-- 엔진 위치 — 옆에 나란히 클론했을 때의 기본값. 다르면 여기만 고치면 된다.
-       (또는 msbuild /p:VulkanCADEngine=<경로>) -->
-  <PropertyGroup Label="VulkanCAD">
-    <VulkanCADEngine Condition="'$(VulkanCADEngine)'==''">$(SolutionDir)..\..\3dEngine</VulkanCADEngine>
+       (또는 msbuild /p:LotCADEngine=<경로>) -->
+  <PropertyGroup Label="LotCAD">
+    <LotCADEngine Condition="'$(LotCADEngine)'==''">$(SolutionDir)..\..\3dEngine</LotCADEngine>
     <!-- import library 는 엔진을 빌드하면 생긴다. 구성이 맞는 것을 쓴다. -->
-    <VulkanCADLibDir Condition="'$(VulkanCADLibDir)'==''">$(VulkanCADEngine)\build\$(Configuration)</VulkanCADLibDir>
+    <LotCADLibDir Condition="'$(LotCADLibDir)'==''">$(LotCADEngine)\build\$(Configuration)</LotCADLibDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -66,13 +66,13 @@
            MSVC 는 소스가 UTF-8(BOM)이어도 실행 문자집합은 시스템 코드페이지로 굽는다. -->
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <!-- 엔진 헤더 둘만 참조한다: plugin/lot_plugin_sdk.h, api/VulkanCAD_API.h -->
-      <AdditionalIncludeDirectories>$(VulkanCADEngine);$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- 엔진 헤더 둘만 참조한다: plugin/lot_plugin_sdk.h, api/LotCAD_API.h -->
+      <AdditionalIncludeDirectories>$(LotCADEngine);$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>VulkanCADCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VulkanCADLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>LotCADCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(LotCADLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>

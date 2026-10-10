@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
-project(VulkanCADPlugins CXX)
+project(LotCADPlugins CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 플러그인을 짓는 규칙(엔진 경로 확인 + add_vulkancad_plugin)은 모듈로 뺐다.
+# 플러그인을 짓는 규칙(엔진 경로 확인 + add_lotcad_plugin)은 모듈로 뺐다.
 # QtPlugin/CMakeLists.txt 도 같은 모듈을 include 한다 — 그래야 Qt Creator 로 그 폴더만
 # 열어도 똑같이 지어진다. 규칙이 두 곳에 갈라지지 않게 하려는 것이다.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(VulkanCADPlugin)
+include(LotCADPlugin)
 
 add_subdirectory(HelloPlugin)
 

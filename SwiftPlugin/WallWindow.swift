@@ -24,7 +24,7 @@
 #if canImport(AppKit)
 
 import AppKit
-import VulkanCAD
+import LotCAD
 
 final class WallWindowController: NSObject, NSWindowDelegate {
 

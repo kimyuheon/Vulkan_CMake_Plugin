@@ -1,11 +1,11 @@
-# VulkanCAD 플러그인
+# LotCAD 플러그인
 
-[VulkanCAD 엔진](https://github.com/kimyuheon/Vulkan_CMake)에 붙이는 플러그인 예제입니다.
+[LotCAD 엔진](https://github.com/kimyuheon/Vulkan_CMake)에 붙이는 플러그인 예제입니다.
 **엔진 소스는 필요 없습니다** — 헤더 둘만 참조합니다.
 
 ```
 plugin/lot_plugin_sdk.h   내보낼 심볼 셋과 ABI 번호
-api/VulkanCAD_API.h       엔진에게 시킬 것들 (명령 200개 이상)
+api/LotCAD_API.h       엔진에게 시킬 것들 (명령 200개 이상)
 ```
 
 ## 플러그인이 하는 일
@@ -36,14 +36,14 @@ LOT_PLUGIN_ABI_EXPORT bool CAD_PluginLoad(unsigned int id) {
 
 ## 빌드
 
-엔진을 먼저 빌드해 두어야 합니다 (Windows 는 `VulkanCADCore.lib` 가 필요).
+엔진을 먼저 빌드해 두어야 합니다 (Windows 는 `LotCADCore.lib` 가 필요).
 
 ```bash
-cmake -B build -DVULKANCAD_ENGINE=<엔진 경로>
+cmake -B build -DLOTCAD_ENGINE=<엔진 경로>
 cmake --build build --config Debug
 ```
 
-엔진 레포를 옆에 나란히 클론했다면 `-DVULKANCAD_ENGINE` 은 생략해도 됩니다.
+엔진 레포를 옆에 나란히 클론했다면 `-DLOTCAD_ENGINE` 은 생략해도 됩니다.
 
 `QtPlugin` 은 **Qt 가 있을 때만** 함께 지어집니다. 못 찾으면 그 예제만 조용히 빠지고
 나머지는 그대로 빌드됩니다 — Qt 하나 때문에 전체가 실패하면 안 되니까요.
@@ -58,7 +58,7 @@ cmake -B build -DCMAKE_PREFIX_PATH=~/Qt/6.7.0/gcc_64
 빌드된 파일을 `plugins/` 에 넣습니다. 엔진이 시작할 때 자동으로 훑습니다.
 
 ```
-VulkanApp.exe
+LotCAD.exe
 plugins/
   HelloPlugin.dll      ← Windows
   HelloPlugin.so       ← Linux
@@ -76,11 +76,11 @@ plugins/
 
 | 어떻게 띄우나 | plugins/ 를 둘 곳 |
 |---|---|
-| 엔진 단독(`VulkanApp`) | 엔진 빌드 폴더 — 거기서 실행하는 것이 전제 |
+| 엔진 단독(`LotCAD`) | 엔진 빌드 폴더 — 거기서 실행하는 것이 전제 |
 | 호스트 임베드(샘플 레포의 `qml_test` 등) | 호스트가 `CAD_SetRuntimeAssetPath` 로 넘긴 폴더 = `sdk/plugins` |
 
 CMake 로 지으면 **찾을 수 있는 곳 전부에 자동으로 복사**합니다(`cmake -B ...` 출력에 경로가
-찍힙니다). 끄려면 `-DVULKANCAD_PLUGINS_DIR=`, 직접 정하려면 그 변수에 폴더들을 `;` 로 줍니다.
+찍힙니다). 끄려면 `-DLOTCAD_PLUGINS_DIR=`, 직접 정하려면 그 변수에 폴더들을 `;` 로 줍니다.
 
 ## 주의할 것
 
@@ -214,7 +214,7 @@ cmake -B build && cmake --build build          # 최상위에서 같이 지어�
 ```
 
 **Qt Creator 로 열려면** `QtPlugin/QtPlugin.pro` 나 `QtPlugin/CMakeLists.txt` 를 엽니다.
-둘 다 **단독으로** 열립니다 — CMake 쪽은 최상위와 같은 규칙 모듈(`cmake/VulkanCADPlugin.cmake`)을
+둘 다 **단독으로** 열립니다 — CMake 쪽은 최상위와 같은 규칙 모듈(`cmake/LotCADPlugin.cmake`)을
 가져다 쓰므로 최상위에서 지을 때와 결과가 같습니다.
 
 처음 열면 *Configure Project* 화면이 나옵니다.
@@ -227,14 +227,14 @@ cmake -B build && cmake --build build          # 최상위에서 같이 지어�
 
 | 여는 방식 | 어디서 고치나 |
 |---|---|
-| CMakeLists.txt | 프로젝트 → 빌드 → CMake → `VULKANCAD_ENGINE` |
-| QtPlugin.pro | 프로젝트 → 빌드 → qmake → 추가 인자에 `VULKANCAD_ENGINE=<경로>` |
+| CMakeLists.txt | 프로젝트 → 빌드 → CMake → `LOTCAD_ENGINE` |
+| QtPlugin.pro | 프로젝트 → 빌드 → qmake → 추가 인자에 `LOTCAD_ENGINE=<경로>` |
 
 명령행이면 이렇습니다.
 
 ```bash
-qmake6 VULKANCAD_ENGINE=<엔진 경로> && make      # qmake
-cmake -B build -S QtPlugin -DVULKANCAD_ENGINE=<엔진 경로>   # CMake 단독
+qmake6 LOTCAD_ENGINE=<엔진 경로> && make      # qmake
+cmake -B build -S QtPlugin -DLOTCAD_ENGINE=<엔진 경로>   # CMake 단독
 ```
 
 ### Qt Creator 에서 바로 실행·디버깅
@@ -248,11 +248,11 @@ cmake -B build -S QtPlugin -DVULKANCAD_ENGINE=<엔진 경로>   # CMake 단독
 
 ```
 -- 플러그인 설치 위치: <엔진>/build/plugins
--- IDE 실행 설정 — 실행 파일: <엔진>/build/VulkanApp
+-- IDE 실행 설정 — 실행 파일: <엔진>/build/LotCAD
 -- IDE 실행 설정 — 작업 디렉터리: <엔진>/build
 ```
 
-끄려면 `-DVULKANCAD_PLUGINS_DIR=`(빈 값), 다른 곳에 넣으려면 그 경로를 줍니다.
+끄려면 `-DLOTCAD_PLUGINS_DIR=`(빈 값), 다른 곳에 넣으려면 그 경로를 줍니다.
 
 **⚠️ 작업 디렉터리가 중요합니다.** 엔진은 `loadPlugins("plugins")` 를 **상대 경로**로
 부릅니다. 기준이 실행 파일 위치가 아니라 **작업 디렉터리**라, 거기를 엔진 빌드 폴더로
@@ -267,7 +267,7 @@ cmake -B build -S QtPlugin -DVULKANCAD_ENGINE=<엔진 경로>   # CMake 단독
 순간 붙습니다(실측).
 
 ```
-Thread 1 "VulkanApp" hit Breakpoint 1, CAD_PluginLoad (pluginId=2)
+Thread 1 "LotCAD" hit Breakpoint 1, CAD_PluginLoad (pluginId=2)
     at .../QtPlugin/qt_plugin.cpp:285
 ```
 
@@ -288,7 +288,7 @@ Thread 1 "VulkanApp" hit Breakpoint 1, CAD_PluginLoad (pluginId=2)
 
 Windows 에 `exec` 가 없어서 생기는 차이입니다 — `_execv` 는 부모를 끝내고 새 프로세스를
 만들어 디버거가 따라오지 못합니다. 그래서 거기서는 "디버깅 시 실행할 명령" 을 IDE 에
-알려 주는 쪽을 씁니다(실행 파일 `<엔진>/VulkanApp.exe`, 작업 디렉터리 `<엔진 폴더>`).
+알려 주는 쪽을 씁니다(실행 파일 `<엔진>/LotCAD.exe`, 작업 디렉터리 `<엔진 폴더>`).
 ObjectARX 에서 디버그 대상을 `acad.exe` 로 잡는 그 설정과 같습니다.
 
 `.pro` 는 `no_plugin_name_prefix` 로 `lib` 접두사를 뗍니다 — 엔진 로더는 확장자로만
@@ -368,7 +368,7 @@ public func pluginLoad(_ id: UInt32) -> Bool {
 }
 ```
 
-엔진 헤더는 **래퍼 한 줄 없이** 그대로 씁니다. modulemap 한 장이면 `import VulkanCAD` 로
+엔진 헤더는 **래퍼 한 줄 없이** 그대로 씁니다. modulemap 한 장이면 `import LotCAD` 로
 명령 200개가 전부 열립니다. 계약이 C++ 인터페이스가 아니라 **순수 C** 라서 되는 일입니다 —
 `lot_plugin_sdk.h` 가 "지금은 C API 만 쓴다" 고 정해 둔 결정의 배당금입니다.
 
@@ -391,7 +391,7 @@ VS Code 는 `.vscode/launch.json` 이 들어 있어 **F5 하나면** 됩니다(C
 
 ```
 ./build.sh debug
-lldb <엔진 실행 파일 옆>/VulkanApp
+lldb <엔진 실행 파일 옆>/LotCAD
 (lldb) breakpoint set --file SwiftPlugin.swift --line 232   # 아직 로드 전이라 pending
 (lldb) run
 ```
@@ -402,7 +402,7 @@ lldb <엔진 실행 파일 옆>/VulkanApp
 ```
 * frame #0: SwiftPlugin.dylib`pluginLoad(id=1) at SwiftPlugin.swift:232:11
   frame #1: SwiftPlugin.dylib`CAD_PluginLoad at <compiler-generated>:0
-  frame #2: libVulkanCADCore.dylib`lot::PluginManager::load(...)
+  frame #2: libLotCADCore.dylib`lot::PluginManager::load(...)
 (lldb) frame variable id     → (UInt32) id = 1
 (lldb) expression pluginId   → (UInt32) $R0 = 1
 ```

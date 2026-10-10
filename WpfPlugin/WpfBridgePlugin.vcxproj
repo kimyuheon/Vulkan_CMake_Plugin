@@ -13,16 +13,22 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
-  <PropertyGroup Label="VulkanCAD">
-    <VulkanCADEngine Condition="'$(VulkanCADEngine)'==''">$(SolutionDir)..\..\3dEngine</VulkanCADEngine>
-    <VulkanCADLibDir Condition="'$(VulkanCADLibDir)'==''">$(VulkanCADEngine)\build\$(Configuration)</VulkanCADLibDir>
+  <PropertyGroup Label="LotCAD">
+    <LotCADEngine Condition="'$(LotCADEngine)'==''">$(SolutionDir)..\..\3dEngine</LotCADEngine>
+    <LotCADLibDir Condition="'$(LotCADLibDir)'==''">$(LotCADEngine)\build\$(Configuration)</LotCADLibDir>
     <!-- .NET 호스팅 헤더/라이브러리(nethost). SDK 를 설치하면 여기 있다.
-         버전이 다르면 이 값만 바꾸면 된다. -->
+         버전은 아래에서 찾는다. -->
     <!-- ⚠️ $(ProgramFiles) 는 32비트 MSBuild 에서 "Program Files (x86)" 로 잡힌다 —
          64비트 경로는 $(ProgramW6432). 없으면 $(ProgramFiles) 로 떨어진다. -->
     <DotnetRoot Condition="'$(DotnetRoot)'=='' AND '$(ProgramW6432)'!=''">$(ProgramW6432)\dotnet</DotnetRoot>
     <DotnetRoot Condition="'$(DotnetRoot)'==''">$(ProgramFiles)\dotnet</DotnetRoot>
-    <DotnetHostPack Condition="'$(DotnetHostPack)'==''">$(DotnetRoot)\packs\Microsoft.NETCore.App.Host.win-x64\8.0.4\runtimes\win-x64\native</DotnetHostPack>
+    <!-- 설치된 8.0.x 호스트 팩을 찾는다(PC 마다 패치 버전이 다르다 — 8.0.4 로 고정했을 땐 8.0.17 만 있는 PC 에서 빌드가 안 됐다).
+         nethost 헤더·라이브러리는 8.0 패치끼리 같아 어느 것이든 된다. 직접 정하려면 /p:DotnetHostPack=<경로>. -->
+    <_LotHostPackRoot>$(DotnetRoot)\packs\Microsoft.NETCore.App.Host.win-x64</_LotHostPackRoot>
+    <_LotHostPacks Condition="'$(DotnetHostPack)'=='' AND Exists('$(_LotHostPackRoot)')">$([System.IO.Directory]::GetDirectories('$(_LotHostPackRoot)', '8.0.*'))</_LotHostPacks>
+    <_LotHostPack Condition="'$(_LotHostPacks)'!=''">$(_LotHostPacks.Substring($([MSBuild]::Add($(_LotHostPacks.LastIndexOf(';')), 1))))</_LotHostPack>
+    <DotnetHostPack Condition="'$(DotnetHostPack)'=='' AND '$(_LotHostPack)'!=''">$(_LotHostPack)\runtimes\win-x64\native</DotnetHostPack>
+    <DotnetHostPack Condition="'$(DotnetHostPack)'==''">$(_LotHostPackRoot)\8.0.4\runtimes\win-x64\native</DotnetHostPack>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -57,12 +63,12 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VulkanCADEngine);$(DotnetHostPack);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(LotCADEngine);$(DotnetHostPack);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>VulkanCADCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VulkanCADLibDir);$(DotnetHostPack);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>LotCADCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(LotCADLibDir);$(DotnetHostPack);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
 

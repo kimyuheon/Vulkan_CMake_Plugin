@@ -15,7 +15,7 @@
 //
 // ⚠️ Windows 는 사정이 다르다. _execv 는 POSIX 처럼 프로세스를 갈아치우지 않고 부모를
 //    끝낸 뒤 새 프로세스를 만든다 — 실행은 되지만 **디버거가 못 따라온다.** 거기서는
-//    Custom Executable(실행 파일 = VulkanApp, 작업 디렉터리 = 엔진 폴더)을 쓰는 편이 낫다.
+//    Custom Executable(실행 파일 = LotCAD, 작업 디렉터리 = 엔진 폴더)을 쓰는 편이 낫다.
 
 #include <cstdio>
 
@@ -30,16 +30,16 @@
 
 int main(int argc, char** argv) {
     (void)argc;
-    if (chdir(VULKANCAD_RUN_DIR) != 0) {
-        std::fprintf(stderr, "[run_engine] 작업 디렉터리로 못 갑니다: %s\n", VULKANCAD_RUN_DIR);
+    if (chdir(LOTCAD_RUN_DIR) != 0) {
+        std::fprintf(stderr, "[run_engine] 작업 디렉터리로 못 갑니다: %s\n", LOTCAD_RUN_DIR);
         return 1;
     }
-    std::printf("[run_engine] %s 에서 %s 실행\n", VULKANCAD_RUN_DIR, VULKANCAD_ENGINE_EXE);
+    std::printf("[run_engine] %s 에서 %s 실행\n", LOTCAD_RUN_DIR, LOTCAD_ENGINE_EXE);
     std::fflush(stdout);
 
     // argv[0] 만 엔진 경로로 바꿔 넘긴다 — 나머지 인자는 그대로 통과.
-    argv[0] = const_cast<char*>(VULKANCAD_ENGINE_EXE);
-    execv(VULKANCAD_ENGINE_EXE, argv);
+    argv[0] = const_cast<char*>(LOTCAD_ENGINE_EXE);
+    execv(LOTCAD_ENGINE_EXE, argv);
 
     std::perror("[run_engine] execv");   // 여기 오면 실패한 것이다
     return 1;

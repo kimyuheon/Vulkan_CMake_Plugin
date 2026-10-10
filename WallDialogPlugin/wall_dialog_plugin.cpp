@@ -13,7 +13,7 @@
 //      안 하면 대화상자 리소스를 **엔진 모듈에서** 찾다가 못 찾고 실패한다.
 
 #include "plugin/lot_plugin_sdk.h"
-#include "api/VulkanCAD_API.h"
+#include "api/LotCAD_API.h"
 
 #include <afxwin.h>
 #include <afxdlgs.h>

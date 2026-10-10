@@ -17,7 +17,7 @@
 //    그래서 CAD_PluginUnload 는 관리 코드에 정리만 시키고 런타임은 그대로 둔다.
 
 #include "plugin/lot_plugin_sdk.h"
-#include "api/VulkanCAD_API.h"
+#include "api/LotCAD_API.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

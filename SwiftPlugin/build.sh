@@ -8,15 +8,15 @@
 #
 #   ./build.sh                 릴리스
 #   ./build.sh debug           디버그
-#   VULKANCAD_ENGINE=<경로> ./build.sh
+#   LOTCAD_ENGINE=<경로> ./build.sh
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENGINE="${VULKANCAD_ENGINE:-$HERE/../../3dEngine}"
+ENGINE="${LOTCAD_ENGINE:-$HERE/../../3dEngine}"
 
 if [[ ! -f "$ENGINE/plugin/lot_plugin_sdk.h" ]]; then
     echo "엔진 헤더를 찾을 수 없습니다: $ENGINE/plugin/lot_plugin_sdk.h" >&2
-    echo "  VULKANCAD_ENGINE=<엔진 경로> ./build.sh" >&2
+    echo "  LOTCAD_ENGINE=<엔진 경로> ./build.sh" >&2
     exit 1
 fi
 
@@ -80,7 +80,7 @@ echo "설치:   cp \"$OUT\" <엔진 실행 파일 옆>/plugins/"
 if [[ "${1:-release}" == "debug" ]]; then
     echo
     echo "디버깅: 플러그인은 실행 파일이 아니다 — 엔진을 띄우고 붙는다."
-    echo "  lldb <엔진 실행 파일 옆>/VulkanApp"
+    echo "  lldb <엔진 실행 파일 옆>/LotCAD"
     echo "  (lldb) breakpoint set --file SwiftPlugin.swift --line 1  # 로드 전이라 pending"
     echo "  (lldb) run"
     echo "⚠️ C 심볼(CAD_PluginLoad)이 아니라 Swift 이름(pluginLoad)이나 파일:줄로 잡는다 —"

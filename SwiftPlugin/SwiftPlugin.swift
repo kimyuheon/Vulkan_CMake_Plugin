@@ -1,4 +1,4 @@
-// SwiftPlugin — Swift 로 쓴 VulkanCAD 플러그인. HelloPlugin 과 같은 것을 보여 준다.
+// SwiftPlugin — Swift 로 쓴 LotCAD 플러그인. HelloPlugin 과 같은 것을 보여 준다.
 //
 // C#/WPF 와 달리 **새시(shim)가 없다.** WpfPlugin 은 네이티브 DLL 이 hostfxr 로 .NET 런타임을
 // 띄우고 관리 어셈블리를 불러들여야 했다. Swift 는 그 층이 통째로 없다:
@@ -19,7 +19,7 @@
 //   · 자기 창         플러그인이 자기 Cocoa 창을 띄운다 (WallWindow.swift)
 
 import Foundation
-import VulkanCAD
+import LotCAD
 
 // ── 전역 상태 ────────────────────────────────────────────────────────────────
 // @convention(c) 콜백은 **캡처를 못 한다** — C 함수 포인터에는 컨텍스트를 담을 자리가

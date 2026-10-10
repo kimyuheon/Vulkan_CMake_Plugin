@@ -3,7 +3,7 @@
 namespace WpfPlugin;
 
 /// <summary>
-/// 엔진 C API (VulkanCADCore.dll) 로 가는 P/Invoke 래퍼.
+/// 엔진 C API (LotCADCore.dll) 로 가는 P/Invoke 래퍼.
 ///
 /// 문자열은 전부 UTF-8 이다. C# 의 기본 마셜링은 ANSI 라 한글이 깨지므로
 /// <c>StringMarshalling = StringMarshalling.Utf8</c> 을 명시한다.
@@ -13,7 +13,7 @@ namespace WpfPlugin;
 /// </summary>
 internal static partial class Cad
 {
-    private const string Dll = "VulkanCADCore";
+    private const string Dll = "LotCADCore";
 
     // ── 명령 등록 ──
     // fn 은 C 함수 포인터다. C# 에선 [UnmanagedCallersOnly] 정적 메서드의 주소를 넘긴다.

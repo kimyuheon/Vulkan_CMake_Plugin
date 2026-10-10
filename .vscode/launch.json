@@ -18,7 +18,7 @@
             "name": "엔진 띄우고 SwiftPlugin 디버그",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/../3dEngine/build/VulkanApp",
+            "program": "${workspaceFolder}/../3dEngine/build/LotCAD",
             "cwd": "${workspaceFolder}/../3dEngine/build",
             "args": [],
             "preLaunchTask": "SwiftPlugin 빌드+설치"

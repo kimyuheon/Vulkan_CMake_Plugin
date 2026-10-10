@@ -8,14 +8,14 @@
 
 # 이 폴더만 단독으로 열어도(Qt Creator 로 QtPlugin/CMakeLists.txt 를 여는 경우) 지어진다.
 # 최상위에서 add_subdirectory 로 들어올 때는 이 블록을 건너뛴다 — project() 가 두 번
-# 불리면 안 되고, 규칙(add_vulkancad_plugin)은 이미 위에서 들어와 있다.
+# 불리면 안 되고, 규칙(add_lotcad_plugin)은 이미 위에서 들어와 있다.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     cmake_minimum_required(VERSION 3.16)
     project(QtPlugin CXX)
     set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
-    include(VulkanCADPlugin)
+    include(LotCADPlugin)
 endif()
 
 find_package(QT NAMES Qt6 Qt5 QUIET COMPONENTS Widgets)
@@ -36,5 +36,5 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)   # .ui 파일을 Qt Designer 로 그리고 싶을 때
 set(CMAKE_AUTORCC ON)
 
-add_vulkancad_plugin(QtPlugin qt_plugin.cpp)
+add_lotcad_plugin(QtPlugin qt_plugin.cpp)
 target_link_libraries(QtPlugin PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
