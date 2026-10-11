@@ -1,6 +1,6 @@
 # LotCAD 플러그인
 
-[LotCAD 엔진](https://github.com/kimyuheon/Vulkan_CMake)에 붙이는 플러그인 예제입니다.
+[LotCAD 엔진](https://lotcad.github.io)에 붙이는 플러그인 예제입니다.
 **엔진 소스는 필요 없습니다** — 헤더 둘만 참조합니다.
 
 ```
