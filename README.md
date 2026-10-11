@@ -471,4 +471,4 @@ C API 를 새로 쓸 때 이 규약을 깨면 Swift/C# 플러그인이 먼저 �
 
 도킹 패널 내용은 ImGui 가 필요합니다(위 UI 종류 표 참조).
 C# 이 **호스트**가 되어 엔진을 품는 것은 별개로 이미 됩니다
-([샘플 레포](https://github.com/kimyuheon/Vulkan_CMake_Sample)의 WPF 예제).
+([샘플 레포](https://github.com/lotcad/Vulkan_CMake_Sample)의 WPF 예제).
